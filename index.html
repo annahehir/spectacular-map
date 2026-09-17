@@ -150,75 +150,54 @@
       document.getElementById('total-count').textContent = inventoryData.length;
     }
 
-    function renderMapAndList(data) {
-      markersCluster.clearLayers();
-      markerMap.clear();
-      const listContainer = document.getElementById('inventory-list');
-      listContainer.innerHTML = '';
+  function renderMapAndList(data) {
+  markersCluster.clearLayers();
+  markerMap.clear();
+  const listContainer = document.getElementById('inventory-list');
+  listContainer.innerHTML = '';
 
-      document.getElementById('visible-count').textContent = data.length;
+  document.getElementById('visible-count').textContent = data.length;
 
-      data.forEach(item => {
-        const streetViewUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${item.latitude},${item.longitude}`;
-        const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${item.latitude},${item.longitude}`;
-        const imageTag = item.asset_image_url ? `<img src="${item.asset_image_url}" class="popup-img" alt="Screen Photo" onerror="this.style.display='none'"/>` : '';
+  data.forEach(item => {
+    const streetViewUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${item.latitude},${item.longitude}`;
+    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${item.latitude},${item.longitude}`;
+    
+    // Automatically upgrades http:// image links to secure https://
+    const imageUrl = item.asset_image_url ? item.asset_image_url.replace('http://', 'https://') : '';
+    const imageTag = imageUrl ? `<img src="${imageUrl}" class="popup-img" alt="Screen Photo" onerror="this.style.display='none'"/>` : '';
 
-        // Map Marker
-        const marker = L.marker([item.latitude, item.longitude]);
-        const popupContent = `
-          <div class="popup-card">
-            <h3>${item.adunit_name || item.asset_name || 'Spectacular Screen'}</h3>
-            <p><strong>Publisher:</strong> ${item.publisher || 'N/A'}</p>
-            <p><strong>Market:</strong> ${item.city || ''}, ${item.state || ''}</p>
-            <p><strong>Address:</strong> ${item.address || 'N/A'}</p>
-            <p><strong>Specs:</strong> ${item.slot_dimensions || 'N/A'}</p>
-            ${imageTag}
-            <div class="btn-group">
-              <a href="${streetViewUrl}" target="_blank" class="btn">Street View</a>
-              <a href="${googleMapsUrl}" target="_blank" class="btn btn-secondary">Google Maps</a>
-            </div>
-          </div>
-        `;
-        marker.bindPopup(popupContent);
-        markersCluster.addLayer(marker);
-        markerMap.set(item.id, marker);
+    // Map Marker
+    const marker = L.marker([item.latitude, item.longitude]);
+    const popupContent = `
+      <div class="popup-card">
+        <h3>${item.adunit_name || item.asset_name || 'Spectacular Screen'}</h3>
+        <p><strong>Publisher:</strong> ${item.publisher || 'N/A'}</p>
+        <p><strong>Market:</strong> ${item.city || ''}, ${item.state || ''}</p>
+        <p><strong>Address:</strong> ${item.address || 'N/A'}</p>
+        <p><strong>Specs:</strong> ${item.slot_dimensions || 'N/A'}</p>
+        ${imageTag}
+        <div class="btn-group">
+          <a href="${streetViewUrl}" target="_blank" class="btn">Street View</a>
+          <a href="${googleMapsUrl}" target="_blank" class="btn btn-secondary">Google Maps</a>
+        </div>
+      </div>
+    `;
+    marker.bindPopup(popupContent);
+    markersCluster.addLayer(marker);
+    markerMap.set(item.id, marker);
 
-        // Sidebar Card
-        const card = document.createElement('div');
-        card.className = 'inventory-card';
-        card.innerHTML = `
-          <h3>${item.adunit_name || item.asset_name}</h3>
-          <p>${item.city}, ${item.state} &bull; ${item.publisher}</p>
-          <span class="badge">${item.slot_dimensions || 'Spectacular'}</span>
-        `;
-        card.addEventListener('click', () => {
-          map.setView([item.latitude, item.longitude], 16);
-          marker.openPopup();
-        });
-        listContainer.appendChild(card);
-      });
-    }
-
-    function applyFilters() {
-      const search = document.getElementById('search-input').value.toLowerCase();
-      const selectedCity = document.getElementById('city-filter').value;
-      const selectedPub = document.getElementById('publisher-filter').value;
-
-      const filtered = inventoryData.filter(item => {
-        const matchesSearch = !search || 
-          (item.adunit_name && item.adunit_name.toLowerCase().includes(search)) ||
-          (item.city && item.city.toLowerCase().includes(search)) ||
-          (item.publisher && item.publisher.toLowerCase().includes(search)) ||
-          (item.address && item.address.toLowerCase().includes(search));
-        
-        const matchesCity = !selectedCity || item.city === selectedCity;
-        const matchesPub = !selectedPub || item.publisher === selectedPub;
-
-        return matchesSearch && matchesCity && matchesPub;
-      });
-
-      renderMapAndList(filtered);
-    }
-  </script>
-</body>
-</html>
+    // Sidebar Card
+    const card = document.createElement('div');
+    card.className = 'inventory-card';
+    card.innerHTML = `
+      <h3>${item.adunit_name || item.asset_name}</h3>
+      <p>${item.city}, ${item.state} &bull; ${item.publisher}</p>
+      <span class="badge">${item.slot_dimensions || 'Spectacular'}</span>
+    `;
+    card.addEventListener('click', () => {
+      map.setView([item.latitude, item.longitude], 16);
+      marker.openPopup();
+    });
+    listContainer.appendChild(card);
+  });
+}
