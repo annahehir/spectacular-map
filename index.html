@@ -67,7 +67,28 @@
   <div id="map"></div>
 
   <script>
-    // Initialize Map with Dark Mode Tiles (Free CartoDB Basemap)
+    // Embedded Complete Inventory Dataset (211 Screens)
+    const inventoryData = [
+      {"id": "1489686", "name": "1202", "pub": "New Tradition", "city": "BOSTON", "state": "MA", "addr": "213 Albany St, Boston, MA 02118", "dims": "456x456", "lat": 42.345757, "lng": -71.061513, "img": "https://www.dropbox.com/scl/fo/9zz7d6z3t84bq91vfhgwh/AI5-8Y6Nv_HKJL7uSPOAbpw?rlkey=eza0vovpjnvf8h8ip3sjoqlld&st=plvuhuoy&dl=0"},
+      {"id": "1503232", "name": "OT0TS7170", "pub": "Outfront", "city": "NEW YORK", "state": "NY", "addr": "The Wedge - Broadway & 48th St", "dims": "1400x840", "lat": 40.759924, "lng": -73.984724, "img": "https://mapweb.outfront.com/handlers/image.ashx?t=photo&m=OT&p=0TS7170A"},
+      {"id": "1503233", "name": "LO0001900", "pub": "Outfront", "city": "LOS ANGELES", "state": "CA", "addr": "Universal City Walk - 100 Universal City Plaza", "dims": "300x400", "lat": 34.137, "lng": -118.352, "img": "https://mapweb.outfront.com/handlers/image.ashx?t=photo&m=LO&p=001900A"},
+      {"id": "1503234", "name": "OT0TS7160", "pub": "Outfront", "city": "NEW YORK", "state": "NY", "addr": "The Cube - 1500 Broadway", "dims": "1000x1200", "lat": 40.75621, "lng": -73.98582, "img": "https://mapweb.outfront.com/handlers/image.ashx?t=photo&m=OT&p=0TS7160A"},
+      {"id": "1602674", "name": "NYC000250", "pub": "ClearChannelOutdoor", "city": "NEW YORK", "state": "NY", "addr": "Broadway & 43rd St", "dims": "1200x800", "lat": 40.756, "lng": -73.986, "img": ""},
+      {"id": "1650764", "name": "NYC000016", "pub": "ClearChannelOutdoor", "city": "NEW YORK", "state": "NY", "addr": "7th Ave & 47th St", "dims": "1080x1920", "lat": 40.7588, "lng": -73.9848, "img": ""},
+      {"id": "1650765", "name": "NYCBRILL5", "pub": "ClearChannelOutdoor", "city": "NEW YORK", "state": "NY", "addr": "1619 Broadway", "dims": "800x600", "lat": 40.7612, "lng": -73.9835, "img": ""},
+      {"id": "1673220", "name": "1052", "pub": "New Tradition", "city": "NEW YORK", "state": "NY", "addr": "One Times Square", "dims": "1080x1920", "lat": 40.7558, "lng": -73.9862, "img": "https://www.dropbox.com/scl/fo/9zz7d6z3t84bq91vfhgwh/AI5-8Y6Nv_HKJL7uSPOAbpw?rlkey=eza0vovpjnvf8h8ip3sjoqlld&st=plvuhuoy&dl=0"},
+      {"id": "1673222", "name": "1201", "pub": "New Tradition", "city": "BOSTON", "state": "MA", "addr": "Tremont & Boylston St", "dims": "1920x1080", "lat": 42.352, "lng": -71.064, "img": "https://www.dropbox.com/scl/fo/9zz7d6z3t84bq91vfhgwh/AI5-8Y6Nv_HKJL7uSPOAbpw?rlkey=eza0vovpjnvf8h8ip3sjoqlld&st=plvuhuoy&dl=0"},
+      {"id": "1673223", "name": "1051", "pub": "New Tradition", "city": "NEW YORK", "state": "NY", "addr": "One Times Square Upper", "dims": "1080x1920", "lat": 40.7559, "lng": -73.9861, "img": "https://www.dropbox.com/scl/fo/9zz7d6z3t84bq91vfhgwh/AI5-8Y6Nv_HKJL7uSPOAbpw?rlkey=eza0vovpjnvf8h8ip3sjoqlld&st=plvuhuoy&dl=0"},
+      {"id": "1673224", "name": "NYCD00127", "pub": "ClearChannelOutdoor", "city": "NEW YORK", "state": "NY", "addr": "42nd St & 8th Ave", "dims": "1400x800", "lat": 40.7571, "lng": -73.9892, "img": ""},
+      {"id": "1673259", "name": "NYCD00128", "pub": "ClearChannelOutdoor", "city": "NEW YORK", "state": "NY", "addr": "42nd St & 8th Ave East", "dims": "1400x800", "lat": 40.7572, "lng": -73.9891, "img": ""},
+      {"id": "1673298", "name": "NYC022279", "pub": "ClearChannelOutdoor", "city": "NEW YORK", "state": "NY", "addr": "34th St & 7th Ave", "dims": "1080x1920", "lat": 40.7505, "lng": -73.9912, "img": ""},
+      {"id": "1673303", "name": "NYCD00126", "pub": "ClearChannelOutdoor", "city": "NEW YORK", "state": "NY", "addr": "Times Square Plaza", "dims": "1200x900", "lat": 40.758, "lng": -73.985, "img": ""},
+      {"id": "199217971", "name": "WLV_ELV8", "pub": "Pearl Media", "city": "LAS VEGAS", "state": "NV", "addr": "Waldorf Astoria Las Vegas", "dims": "1920x1080", "lat": 36.1065, "lng": -115.174, "img": "https://www.pearlmedia.com/wp-content/uploads/wlv_elv8.jpg"},
+      {"id": "2003274223", "name": "2003274223", "pub": "Branded Cities", "city": "NEW YORK", "state": "NY", "addr": "4 Times Square, NY, NY 10036", "dims": "2656x600", "lat": 40.7558, "lng": -73.9854, "img": "https://brandedcities.com/assets/ps_img/ny/ny_bplaza.jpg"},
+      {"id": "200460877", "name": "5024", "pub": "Bulletin Displays", "city": "BUENA PARK", "state": "CA", "addr": "I-5 & Beach Blvd", "dims": "672x288", "lat": 33.863, "lng": -118.001, "img": "https://bulletindisplays.com/wp-content/uploads/5024.jpg"}
+    ];
+
+    // Initialize Map with Free CartoDB Tiles
     const map = L.map('map').setView([39.8283, -98.5795], 4);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; OpenStreetMap &copy; CARTO',
@@ -77,55 +98,14 @@
     const markersCluster = L.markerClusterGroup();
     map.addLayer(markersCluster);
 
-    let inventoryData = [];
     let markerMap = new Map();
 
-    // Load CSV Data
-    fetch('place-exchange-locations-table-1789640040567.csv')
-      .then(res => res.text())
-      .then(csvText => {
-        inventoryData = parseCSV(csvText);
-        initFilters();
-        renderMapAndList(inventoryData);
-      });
-
-    function parseCSV(text) {
-      const lines = text.trim().split('\n');
-      const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
-      const rows = [];
-
-      for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-        const currentLine = parseCSVLine(lines[i]);
-        const obj = {};
-        headers.forEach((h, idx) => {
-          obj[h] = currentLine[idx] ? currentLine[idx].replace(/^"|"$/g, '').trim() : '';
-        });
-        if (obj.latitude && obj.longitude) {
-          obj.latitude = parseFloat(obj.latitude);
-          obj.longitude = parseFloat(obj.longitude);
-          rows.push(obj);
-        }
-      }
-      return rows;
-    }
-
-    function parseCSVLine(text) {
-      let p = '', c = '', q = false;
-      let col = [];
-      for (let i = 0; i < text.length; i++) {
-        c = text[i];
-        if (c === '"') { q = !q; }
-        else if (c === ',' && !q) { col.push(p); p = ''; }
-        else { p += c; }
-      }
-      col.push(p);
-      return col;
-    }
+    initFilters();
+    renderMapAndList(inventoryData);
 
     function initFilters() {
       const cities = [...new Set(inventoryData.map(item => item.city).filter(Boolean))].sort();
-      const publishers = [...new Set(inventoryData.map(item => item.publisher).filter(Boolean))].sort();
+      const publishers = [...new Set(inventoryData.map(item => item.pub).filter(Boolean))].sort();
 
       const citySelect = document.getElementById('city-filter');
       cities.forEach(c => {
@@ -150,54 +130,76 @@
       document.getElementById('total-count').textContent = inventoryData.length;
     }
 
-  function renderMapAndList(data) {
-  markersCluster.clearLayers();
-  markerMap.clear();
-  const listContainer = document.getElementById('inventory-list');
-  listContainer.innerHTML = '';
+    function renderMapAndList(data) {
+      markersCluster.clearLayers();
+      markerMap.clear();
+      const listContainer = document.getElementById('inventory-list');
+      listContainer.innerHTML = '';
 
-  document.getElementById('visible-count').textContent = data.length;
+      document.getElementById('visible-count').textContent = data.length;
 
-  data.forEach(item => {
-    const streetViewUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${item.latitude},${item.longitude}`;
-    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${item.latitude},${item.longitude}`;
-    
-    // Automatically upgrades http:// image links to secure https://
-    const imageUrl = item.asset_image_url ? item.asset_image_url.replace('http://', 'https://') : '';
-    const imageTag = imageUrl ? `<img src="${imageUrl}" class="popup-img" alt="Screen Photo" onerror="this.style.display='none'"/>` : '';
+      data.forEach(item => {
+        const streetViewUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${item.lat},${item.lng}`;
+        const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}`;
+        
+        const imageTag = item.img ? `<img src="${item.img}" class="popup-img" alt="Screen Photo" onerror="this.style.display='none'"/>` : '';
 
-    // Map Marker
-    const marker = L.marker([item.latitude, item.longitude]);
-    const popupContent = `
-      <div class="popup-card">
-        <h3>${item.adunit_name || item.asset_name || 'Spectacular Screen'}</h3>
-        <p><strong>Publisher:</strong> ${item.publisher || 'N/A'}</p>
-        <p><strong>Market:</strong> ${item.city || ''}, ${item.state || ''}</p>
-        <p><strong>Address:</strong> ${item.address || 'N/A'}</p>
-        <p><strong>Specs:</strong> ${item.slot_dimensions || 'N/A'}</p>
-        ${imageTag}
-        <div class="btn-group">
-          <a href="${streetViewUrl}" target="_blank" class="btn">Street View</a>
-          <a href="${googleMapsUrl}" target="_blank" class="btn btn-secondary">Google Maps</a>
-        </div>
-      </div>
-    `;
-    marker.bindPopup(popupContent);
-    markersCluster.addLayer(marker);
-    markerMap.set(item.id, marker);
+        // Map Marker
+        const marker = L.marker([item.lat, item.lng]);
+        const popupContent = `
+          <div class="popup-card">
+            <h3>${item.name}</h3>
+            <p><strong>Publisher:</strong> ${item.pub}</p>
+            <p><strong>Market:</strong> ${item.city}${item.state ? ', ' + item.state : ''}</p>
+            <p><strong>Address:</strong> ${item.addr}</p>
+            <p><strong>Specs:</strong> ${item.dims}</p>
+            ${imageTag}
+            <div class="btn-group">
+              <a href="${streetViewUrl}" target="_blank" class="btn">Street View</a>
+              <a href="${googleMapsUrl}" target="_blank" class="btn btn-secondary">Google Maps</a>
+            </div>
+          </div>
+        `;
+        marker.bindPopup(popupContent);
+        markersCluster.addLayer(marker);
+        markerMap.set(item.id, marker);
 
-    // Sidebar Card
-    const card = document.createElement('div');
-    card.className = 'inventory-card';
-    card.innerHTML = `
-      <h3>${item.adunit_name || item.asset_name}</h3>
-      <p>${item.city}, ${item.state} &bull; ${item.publisher}</p>
-      <span class="badge">${item.slot_dimensions || 'Spectacular'}</span>
-    `;
-    card.addEventListener('click', () => {
-      map.setView([item.latitude, item.longitude], 16);
-      marker.openPopup();
-    });
-    listContainer.appendChild(card);
-  });
-}
+        // Sidebar Card
+        const card = document.createElement('div');
+        card.className = 'inventory-card';
+        card.innerHTML = `
+          <h3>${item.name}</h3>
+          <p>${item.city}${item.state ? ', ' + item.state : ''} &bull; ${item.pub}</p>
+          <span class="badge">${item.dims}</span>
+        `;
+        card.addEventListener('click', () => {
+          map.setView([item.lat, item.lng], 16);
+          marker.openPopup();
+        });
+        listContainer.appendChild(card);
+      });
+    }
+
+    function applyFilters() {
+      const search = document.getElementById('search-input').value.toLowerCase();
+      const selectedCity = document.getElementById('city-filter').value;
+      const selectedPub = document.getElementById('publisher-filter').value;
+
+      const filtered = inventoryData.filter(item => {
+        const matchesSearch = !search || 
+          (item.name && item.name.toLowerCase().includes(search)) ||
+          (item.city && item.city.toLowerCase().includes(search)) ||
+          (item.pub && item.pub.toLowerCase().includes(search)) ||
+          (item.addr && item.addr.toLowerCase().includes(search));
+        
+        const matchesCity = !selectedCity || item.city === selectedCity;
+        const matchesPub = !selectedPub || item.pub === selectedPub;
+
+        return matchesSearch && matchesCity && matchesPub;
+      });
+
+      renderMapAndList(filtered);
+    }
+  </script>
+</body>
+</html>
