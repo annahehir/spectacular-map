@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Spectacular Billboard Inventory Map</title>
+  <!-- Leaflet CSS & JS for Free Keyless Mapping -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet Marker Cluster Plugin -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { display: flex; height: 100vh; overflow: hidden; background: #0f172a; color: #f8fafc; }
+    #sidebar { width: 360px; background: #1e293b; display: flex; flex-direction: column; border-right: 1px solid #334155; z-index: 1000; }
+    .sidebar-header { padding: 20px; border-bottom: 1px solid #334155; }
+    .sidebar-header h1 { font-size: 1.25rem; font-weight: 700; color: #38bdf8; margin-bottom: 6px; }
+    .sidebar-header p { font-size: 0.85rem; color: #94a3b8; }
+    .controls { padding: 16px; border-bottom: 1px solid #334155; display: flex; flex-direction: column; gap: 12px; }
+    input[type="text"], select { width: 100%; padding: 10px 12px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #fff; font-size: 0.9rem; }
+    input[type="text"]:focus, select:focus { outline: none; border-color: #38bdf8; }
+    .stats-bar { padding: 12px 20px; background: #0f172a; font-size: 0.8rem; color: #94a3b8; display: flex; justify-content: space-between; border-bottom: 1px solid #334155; }
+    #inventory-list { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .inventory-card { background: #0f172a; border: 1px solid #334155; padding: 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s ease; }
+    .inventory-card:hover { border-color: #38bdf8; transform: translateY(-1px); }
+    .inventory-card h3 { font-size: 0.95rem; font-weight: 600; color: #f1f5f9; margin-bottom: 4px; }
+    .inventory-card p { font-size: 0.8rem; color: #94a3b8; line-height: 1.4; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; margin-top: 6px; background: #0284c7; color: #fff; }
+    #map { flex: 1; height: 100%; }
+    .popup-card { color: #0f172a; max-width: 280px; }
+    .popup-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 4px; color: #0f172a; }
+    .popup-card p { font-size: 0.85rem; color: #475569; margin-bottom: 4px; }
+    .popup-img { width: 100%; height: 140px; object-fit: cover; border-radius: 4px; margin: 8px 0; background: #e2e8f0; }
+    .btn-group { display: flex; gap: 6px; margin-top: 8px; }
+    .btn { flex: 1; text-align: center; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-decoration: none; color: #fff; background: #2563eb; transition: background 0.2s; }
+    .btn:hover { background: #1d4ed8; }
+    .btn-secondary { background: #475569; }
+    .btn-secondary:hover { background: #334155; }
+  </style>
+</head>
+<body>
+
+  <div id="sidebar">
+    <div class="sidebar-header">
+      <h1>Spectacular Atlas</h1>
+      <p>Interactive Billboard Inventory</p>
+    </div>
+    <div class="controls">
+      <input type="text" id="search-input" placeholder="Search by market, publisher, or ID..." />
+      <select id="city-filter">
+        <option value="">All Markets / Cities</option>
+      </select>
+      <select id="publisher-filter">
+        <option value="">All Publishers</option>
+      </select>
+    </div>
+    <div class="stats-bar">
+      <span>Visible Screens: <strong id="visible-count">0</strong></span>
+      <span>Total: <strong id="total-count">0</strong></span>
+    </div>
+    <div id="inventory-list"></div>
+  </div>
+
+  <div id="map"></div>
+
+  <script>
+    // Initialize Map with Dark Mode Tiles (Free CartoDB Basemap)
+    const map = L.map('map').setView([39.8283, -98.5795], 4);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap &copy; CARTO',
+      maxZoom: 19
+    }).addTo(map);
+
+    const markersCluster = L.markerClusterGroup();
+    map.addLayer(markersCluster);
+
+    let inventoryData = [];
+    let markerMap = new Map();
+
+    // Load CSV Data
+    fetch('place-exchange-locations-table-1789640040567.csv')
+      .then(res => res.text())
+      .then(csvText => {
+        inventoryData = parseCSV(csvText);
+        initFilters();
+        renderMapAndList(inventoryData);
+      });
+
+    function parseCSV(text) {
+      const lines = text.trim().split('\n');
+      const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
+      const rows = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        const currentLine = parseCSVLine(lines[i]);
+        const obj = {};
+        headers.forEach((h, idx) => {
+          obj[h] = currentLine[idx] ? currentLine[idx].replace(/^"|"$/g, '').trim() : '';
+        });
+        if (obj.latitude && obj.longitude) {
+          obj.latitude = parseFloat(obj.latitude);
+          obj.longitude = parseFloat(obj.longitude);
+          rows.push(obj);
+        }
+      }
+      return rows;
+    }
+
+    function parseCSVLine(text) {
+      let p = '', c = '', q = false;
+      let col = [];
+      for (let i = 0; i < text.length; i++) {
+        c = text[i];
+        if (c === '"') { q = !q; }
+        else if (c === ',' && !q) { col.push(p); p = ''; }
+        else { p += c; }
+      }
+      col.push(p);
+      return col;
+    }
+
+    function initFilters() {
+      const cities = [...new Set(inventoryData.map(item => item.city).filter(Boolean))].sort();
+      const publishers = [...new Set(inventoryData.map(item => item.publisher).filter(Boolean))].sort();
+
+      const citySelect = document.getElementById('city-filter');
+      cities.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        citySelect.appendChild(opt);
+      });
+
+      const pubSelect = document.getElementById('publisher-filter');
+      publishers.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p;
+        opt.textContent = p;
+        pubSelect.appendChild(opt);
+      });
+
+      document.getElementById('search-input').addEventListener('input', applyFilters);
+      citySelect.addEventListener('change', applyFilters);
+      pubSelect.addEventListener('change', applyFilters);
+
+      document.getElementById('total-count').textContent = inventoryData.length;
+    }
+
+    function renderMapAndList(data) {
+      markersCluster.clearLayers();
+      markerMap.clear();
+      const listContainer = document.getElementById('inventory-list');
+      listContainer.innerHTML = '';
+
+      document.getElementById('visible-count').textContent = data.length;
+
+      data.forEach(item => {
+        const streetViewUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${item.latitude},${item.longitude}`;
+        const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${item.latitude},${item.longitude}`;
+        const imageTag = item.asset_image_url ? `<img src="${item.asset_image_url}" class="popup-img" alt="Screen Photo" onerror="this.style.display='none'"/>` : '';
+
+        // Map Marker
+        const marker = L.marker([item.latitude, item.longitude]);
+        const popupContent = `
+          <div class="popup-card">
+            <h3>${item.adunit_name || item.asset_name || 'Spectacular Screen'}</h3>
+            <p><strong>Publisher:</strong> ${item.publisher || 'N/A'}</p>
+            <p><strong>Market:</strong> ${item.city || ''}, ${item.state || ''}</p>
+            <p><strong>Address:</strong> ${item.address || 'N/A'}</p>
+            <p><strong>Specs:</strong> ${item.slot_dimensions || 'N/A'}</p>
+            ${imageTag}
+            <div class="btn-group">
+              <a href="${streetViewUrl}" target="_blank" class="btn">Street View</a>
+              <a href="${googleMapsUrl}" target="_blank" class="btn btn-secondary">Google Maps</a>
+            </div>
+          </div>
+        `;
+        marker.bindPopup(popupContent);
+        markersCluster.addLayer(marker);
+        markerMap.set(item.id, marker);
+
+        // Sidebar Card
+        const card = document.createElement('div');
+        card.className = 'inventory-card';
+        card.innerHTML = `
+          <h3>${item.adunit_name || item.asset_name}</h3>
+          <p>${item.city}, ${item.state} &bull; ${item.publisher}</p>
+          <span class="badge">${item.slot_dimensions || 'Spectacular'}</span>
+        `;
+        card.addEventListener('click', () => {
+          map.setView([item.latitude, item.longitude], 16);
+          marker.openPopup();
+        });
+        listContainer.appendChild(card);
+      });
+    }
+
+    function applyFilters() {
+      const search = document.getElementById('search-input').value.toLowerCase();
+      const selectedCity = document.getElementById('city-filter').value;
+      const selectedPub = document.getElementById('publisher-filter').value;
+
+      const filtered = inventoryData.filter(item => {
+        const matchesSearch = !search || 
+          (item.adunit_name && item.adunit_name.toLowerCase().includes(search)) ||
+          (item.city && item.city.toLowerCase().includes(search)) ||
+          (item.publisher && item.publisher.toLowerCase().includes(search)) ||
+          (item.address && item.address.toLowerCase().includes(search));
+        
+        const matchesCity = !selectedCity || item.city === selectedCity;
+        const matchesPub = !selectedPub || item.publisher === selectedPub;
+
+        return matchesSearch && matchesCity && matchesPub;
+      });
+
+      renderMapAndList(filtered);
+    }
+  </script>
+</body>
+</html>
