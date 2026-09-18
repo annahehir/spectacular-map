@@ -160,15 +160,21 @@
       data.forEach(item => {
         const streetViewUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${item.lat},${item.lng}`;
         const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}`;
-        
-        let imageTag = '';
-        if (item.img) {
-          if (item.img.includes('dropbox.com')) {
-            imageTag = `<div style="margin:8px 0;"><a href="${item.img}" target="_blank" style="font-size:0.8rem; color:#2563eb; font-weight:600; text-decoration:underline;">View Spec Sheet / Photo (Dropbox)</a></div>`;
-          } else {
-            imageTag = `<img src="${item.img}" class="popup-img" alt="Screen Photo" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1542751371-adc38448a05e?w=500&auto=format&fit=crop';"/>`;
-          }
-        }
+
+  let imageTag = '';
+if (item.img) {
+  if (item.img.includes('dropbox.com')) {
+    // Converts Dropbox share links into raw image stream links
+    const directImgUrl = item.img.replace('?dl=0', '?raw=1').replace('&dl=0', '&raw=1');
+    imageTag = `
+      <div style="margin:8px 0;">
+        <img src="${directImgUrl}" class="popup-img" alt="Screen Preview" onerror="this.style.display='none';"/>
+        <a href="${item.img}" target="_blank" style="display:block; margin-top:4px; font-size:0.8rem; color:#2563eb; font-weight:600; text-decoration:underline;">View Full Spec Sheet & Additional Photos (Dropbox)</a>
+      </div>`;
+  } else {
+    imageTag = `<img src="${item.img}" class="popup-img" alt="Screen Preview" onerror="this.style.display='none';"/>`;
+  }
+}
 
         // Map Marker
         const marker = L.marker([item.lat, item.lng]);
