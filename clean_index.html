@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Spectacular Billboard Inventory Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { display: flex; height: 100vh; overflow: hidden; background: #0f172a; color: #f8fafc; }
+    #sidebar { width: 380px; background: #1e293b; display: flex; flex-direction: column; border-right: 1px solid #334155; z-index: 1000; }
+    .sidebar-header { padding: 20px; border-bottom: 1px solid #334155; }
+    .sidebar-header h1 { font-size: 1.25rem; font-weight: 700; color: #38bdf8; margin-bottom: 4px; }
+    .sidebar-header p { font-size: 0.85rem; color: #94a3b8; }
+    .controls { padding: 16px; border-bottom: 1px solid #334155; display: flex; flex-direction: column; gap: 10px; }
+    input[type="text"], select { width: 100%; padding: 10px 12px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #fff; font-size: 0.88rem; }
+    input[type="text"]:focus, select:focus { outline: none; border-color: #38bdf8; }
+    .stats-bar { padding: 10px 20px; background: #0f172a; font-size: 0.8rem; color: #94a3b8; display: flex; justify-content: space-between; border-bottom: 1px solid #334155; }
+    #inventory-list { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .inventory-card { background: #0f172a; border: 1px solid #334155; padding: 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s ease; }
+    .inventory-card:hover { border-color: #38bdf8; transform: translateY(-1px); }
+    .inventory-card h3 { font-size: 0.92rem; font-weight: 600; color: #f1f5f9; margin-bottom: 4px; }
+    .inventory-card p { font-size: 0.78rem; color: #94a3b8; line-height: 1.4; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; margin-top: 6px; background: #0284c7; color: #fff; }
+    .badge-preview { background: #059669; }
+    #map { flex: 1; height: 100%; }
+    .popup-card { color: #0f172a; max-width: 290px; }
+    .popup-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
+    .popup-card p { font-size: 0.82rem; color: #475569; margin-bottom: 4px; line-height: 1.3; }
+    .popup-img { width: 100%; max-height: 170px; object-fit: cover; border-radius: 6px; margin: 8px 0; background: #e2e8f0; border: 1px solid #cbd5e1; }
+    .btn-group { display: flex; gap: 6px; margin-top: 10px; }
+    .btn { flex: 1; text-align: center; padding: 7px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-decoration: none; color: #fff; background: #2563eb; transition: background 0.2s; }
+    .btn:hover { background: #1d4ed8; }
+    .btn-secondary { background: #475569; }
+    .btn-secondary:hover { background: #334155; }
+  </style>
+</head>
+<body>
+
+  <div id="sidebar">
+    <div class="sidebar-header">
+      <h1>Spectacular Atlas</h1>
+      <p>Interactive Billboard Inventory & Previews</p>
+    </div>
+    <div class="controls">
+      <input type="text" id="search-input" placeholder="Search market, publisher, or ID..." />
+      <select id="city-filter">
+        <option value="">All Markets / Cities</option>
+      </select>
+      <select id="publisher-filter">
+        <option value="">All Publishers</option>
+      </select>
+    </div>
+    <div class="stats-bar">
+      <span>Visible Screens: <strong id="visible-count">0</strong></span>
+      <span>Total: <strong id="total-count">0</strong></span>
+    </div>
+    <div id="inventory-list"></div>
+  </div>
+
+  <div id="map"></div>
+
+  <!-- Load data array from data.js -->
+  <script src="data.js"></script>
+
+  <script>
+    const map = L.map('map').setView([39.8283, -98.5795], 4);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap &copy; CARTO',
+      maxZoom: 19
+    }).addTo(map);
+
+    const markersCluster = L.markerClusterGroup();
+    map.addLayer(markersCluster);
+
+    let markerMap = new Map();
+
+    initFilters();
+    renderMapAndList(inventoryData);
+
+    function initFilters() {
+      const cities = [...new Set(inventoryData.map(item => item.city).filter(Boolean))].sort();
+      const publishers = [...new Set(inventoryData.map(item => item.publisher).filter(Boolean))].sort();
+
+      const citySelect = document.getElementById('city-filter');
+      cities.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        citySelect.appendChild(opt);
+      });
+
+      const pubSelect = document.getElementById('publisher-filter');
+      publishers.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p;
+        opt.textContent = p;
+        pubSelect.appendChild(opt);
+      });
+
+      document.getElementById('search-input').addEventListener('input', applyFilters);
+      citySelect.addEventListener('change', applyFilters);
+      pubSelect.addEventListener('change', applyFilters);
+
+      document.getElementById('total-count').textContent = inventoryData.length;
+    }
+
+    function renderMapAndList(data) {
+      markersCluster.clearLayers();
+      markerMap.clear();
+      const listContainer = document.getElementById('inventory-list');
+      listContainer.innerHTML = '';
+
+      document.getElementById('visible-count').textContent = data.length;
+
+      data.forEach(item => {
+        const streetViewUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${item.lat},${item.lng}`;
+        const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}`;
+        
+        let imageHtml = '';
+        if (item.img_src && item.img_src.startsWith('data:image')) {
+          imageHtml = `<img src="${item.img_src}" class="popup-img" alt="Deck Photo"/>`;
+        } else {
+          imageHtml = `<div style="background:#0f172a;padding:10px;border-radius:6px;margin:8px 0;text-align:center;border:1px solid #334155;"><span style="color:#94a3b8;font-size:0.8rem;">📷 No Deck Photo — View in Street View below</span></div>`;
+        }
+
+        const marker = L.marker([item.lat, item.lng]);
+        const popupContent = `
+          <div class="popup-card">
+            <h3>${item.name}</h3>
+            <p><strong>Publisher:</strong> ${item.publisher}</p>
+            <p><strong>Market:</strong> ${item.city}, ${item.state}</p>
+            <p><strong>Specs:</strong> ${item.dimensions}</p>
+            <p><strong>Address:</strong> ${item.address}</p>
+            ${imageHtml}
+            <div class="btn-group">
+              <a href="${streetViewUrl}" target="_blank" class="btn">Street View</a>
+              <a href="${googleMapsUrl}" target="_blank" class="btn btn-secondary">Google Maps</a>
+            </div>
+          </div>
+        `;
+        marker.bindPopup(popupContent);
+        markersCluster.addLayer(marker);
+        markerMap.set(item.id, marker);
+
+        const card = document.createElement('div');
+        card.className = 'inventory-card';
+        const hasPreview = item.img_src && item.img_src.startsWith('data:image');
+        const badgeClass = hasPreview ? 'badge badge-preview' : 'badge';
+        const badgeLabel = hasPreview ? 'Deck Photo Available' : 'Street View Fallback';
+
+        card.innerHTML = `
+          <h3>${item.name}</h3>
+          <p>${item.city}, ${item.state} &bull; ${item.publisher}</p>
+          <span class="${badgeClass}">${badgeLabel}</span>
+        `;
+        card.addEventListener('click', () => {
+          map.setView([item.lat, item.lng], 16);
+          marker.openPopup();
+        });
+        listContainer.appendChild(card);
+      });
+    }
+
+    function applyFilters() {
+      const search = document.getElementById('search-input').value.toLowerCase();
+      const selectedCity = document.getElementById('city-filter').value;
+      const selectedPub = document.getElementById('publisher-filter').value;
+
+      const filtered = inventoryData.filter(item => {
+        const matchesSearch = !search || 
+          (item.name && item.name.toLowerCase().includes(search)) ||
+          (item.city && item.city.toLowerCase().includes(search)) ||
+          (item.publisher && item.publisher.toLowerCase().includes(search)) ||
+          (item.address && item.address.toLowerCase().includes(search));
+        
+        const matchesCity = !selectedCity || item.city === selectedCity;
+        const matchesPub = !selectedPub || item.publisher === selectedPub;
+
+        return matchesSearch && matchesCity && matchesPub;
+      });
+
+      renderMapAndList(filtered);
+    }
+  </script>
+</body>
+</html>
