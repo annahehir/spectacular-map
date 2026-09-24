@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -27,12 +28,10 @@
     .inventory-card h3 { font-size: 0.92rem; font-weight: 600; color: #f1f5f9; margin-bottom: 4px; }
     .inventory-card p { font-size: 0.78rem; color: #94a3b8; line-height: 1.4; }
     .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; margin-top: 6px; background: #0284c7; color: #fff; }
-    .badge-preview { background: #059669; }
     #map { flex: 1; height: 100%; }
     .popup-card { color: #0f172a; max-width: 290px; }
     .popup-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
     .popup-card p { font-size: 0.82rem; color: #475569; margin-bottom: 4px; line-height: 1.3; }
-    .popup-img { width: 100%; max-height: 170px; object-fit: cover; border-radius: 6px; margin: 8px 0; background: #e2e8f0; border: 1px solid #cbd5e1; }
     .btn-group { display: flex; gap: 6px; margin-top: 10px; }
     .btn { flex: 1; text-align: center; padding: 7px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-decoration: none; color: #fff; background: #2563eb; transition: background 0.2s; }
     .btn:hover { background: #1d4ed8; }
@@ -45,7 +44,7 @@
   <div id="sidebar">
     <div class="sidebar-header">
       <h1>Spectacular Atlas</h1>
-      <p>Interactive Billboard Inventory & Previews</p>
+      <p>Interactive Billboard Inventory</p>
     </div>
     <div class="controls">
       <input type="text" id="search-input" placeholder="Search market, publisher, or ID..." />
@@ -65,31 +64,54 @@
 
   <div id="map"></div>
 
-  <!-- Load data array from data.js -->
-  <script src="data.js"></script>
-
   <script>
     const map = L.map('map').setView([39.8283, -98.5795], 4);
-    
-    // OpenStreetMap tiles - 100% free with NO API key or watermark required
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
       maxZoom: 19
     }).addTo(map);
 
     const markersCluster = L.markerClusterGroup();
     map.addLayer(markersCluster);
-
     let markerMap = new Map();
+    let inventoryData = [];
 
-    initFilters();
-    renderMapAndList(inventoryData);
+    // Load CSV for locations ONLY (ignoring CSV photo URLs entirely)
+    Papa.parse('place-exchange-locations-table-1789640040567.csv', {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: function(results) {
+        inventoryData = results.data.map((r, idx) => {
+          let lat = parseFloat(r.latitude);
+          let lng = parseFloat(r.longitude);
+          if (isNaN(lat) || isNaN(lng)) return null;
+
+          return {
+            id: r.id || String(idx),
+            name: r.adunit_name || r.asset_name || 'Spectacular Screen',
+            pub: r.publisher || 'N/A',
+            city: r.city || '',
+            state: r.state || '',
+            addr: r.address || 'N/A',
+            dims: r.slot_dimensions || 'N/A',
+            lat: lat,
+            lng: lng,
+            img: '' // Strictly ignore CSV photo sheet links!
+          };
+        }).filter(Boolean);
+
+        initFilters();
+        renderMapAndList(inventoryData);
+      }
+    });
 
     function initFilters() {
       const cities = [...new Set(inventoryData.map(item => item.city).filter(Boolean))].sort();
-      const publishers = [...new Set(inventoryData.map(item => item.publisher).filter(Boolean))].sort();
+      const publishers = [...new Set(inventoryData.map(item => item.pub).filter(Boolean))].sort();
 
       const citySelect = document.getElementById('city-filter');
+      citySelect.innerHTML = '<option value="">All Markets / Cities</option>';
       cities.forEach(c => {
         const opt = document.createElement('option');
         opt.value = c;
@@ -98,6 +120,7 @@
       });
 
       const pubSelect = document.getElementById('publisher-filter');
+      pubSelect.innerHTML = '<option value="">All Publishers</option>';
       publishers.forEach(p => {
         const opt = document.createElement('option');
         opt.value = p;
@@ -123,23 +146,15 @@
       data.forEach(item => {
         const streetViewUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${item.lat},${item.lng}`;
         const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}`;
-        
-        let imageHtml = '';
-        if (item.img_src && item.img_src.startsWith('data:image')) {
-          imageHtml = `<img src="${item.img_src}" class="popup-img" alt="Deck Photo"/>`;
-        } else {
-          imageHtml = `<div style="background:#0f172a;padding:10px;border-radius:6px;margin:8px 0;text-align:center;border:1px solid #334155;"><span style="color:#94a3b8;font-size:0.8rem;">📷 No Deck Photo — View in Street View below</span></div>`;
-        }
 
         const marker = L.marker([item.lat, item.lng]);
         const popupContent = `
           <div class="popup-card">
             <h3>${item.name}</h3>
-            <p><strong>Publisher:</strong> ${item.publisher}</p>
-            <p><strong>Market:</strong> ${item.city}, ${item.state}</p>
-            <p><strong>Specs:</strong> ${item.dimensions}</p>
-            <p><strong>Address:</strong> ${item.address}</p>
-            ${imageHtml}
+            <p><strong>Publisher:</strong> ${item.pub}</p>
+            <p><strong>Market:</strong> ${item.city}${item.state ? ', ' + item.state : ''}</p>
+            <p><strong>Address:</strong> ${item.addr}</p>
+            <p><strong>Specs:</strong> ${item.dims}</p>
             <div class="btn-group">
               <a href="${streetViewUrl}" target="_blank" class="btn">Street View</a>
               <a href="${googleMapsUrl}" target="_blank" class="btn btn-secondary">Google Maps</a>
@@ -152,14 +167,10 @@
 
         const card = document.createElement('div');
         card.className = 'inventory-card';
-        const hasPreview = item.img_src && item.img_src.startsWith('data:image');
-        const badgeClass = hasPreview ? 'badge badge-preview' : 'badge';
-        const badgeLabel = hasPreview ? 'Deck Photo Available' : 'Street View Fallback';
-
         card.innerHTML = `
           <h3>${item.name}</h3>
-          <p>${item.city}, ${item.state} &bull; ${item.publisher}</p>
-          <span class="${badgeClass}">${badgeLabel}</span>
+          <p>${item.city}${item.state ? ', ' + item.state : ''} &bull; ${item.pub}</p>
+          <span class="badge">${item.dims}</span>
         `;
         card.addEventListener('click', () => {
           map.setView([item.lat, item.lng], 16);
@@ -178,11 +189,11 @@
         const matchesSearch = !search || 
           (item.name && item.name.toLowerCase().includes(search)) ||
           (item.city && item.city.toLowerCase().includes(search)) ||
-          (item.publisher && item.publisher.toLowerCase().includes(search)) ||
-          (item.address && item.address.toLowerCase().includes(search));
+          (item.pub && item.pub.toLowerCase().includes(search)) ||
+          (item.addr && item.addr.toLowerCase().includes(search));
         
         const matchesCity = !selectedCity || item.city === selectedCity;
-        const matchesPub = !selectedPub || item.publisher === selectedPub;
+        const matchesPub = !selectedPub || item.pub === selectedPub;
 
         return matchesSearch && matchesCity && matchesPub;
       });
