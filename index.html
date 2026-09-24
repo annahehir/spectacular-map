@@ -10,7 +10,7 @@
   <!-- Marker Cluster -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.js"></script>
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -66,8 +66,152 @@
   <div id="map"></div>
 
   <script>
-    // Embedded dataset guarantees zero network/CORS issues!
-    fetch('index_embedded_211.html').catch(() => {});
+    const map = L.map('map').setView([39.8283, -98.5795], 4);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19
+    }).addTo(map);
+
+    const markersCluster = L.markerClusterGroup();
+    map.addLayer(markersCluster);
+    let markerMap = new Map();
+
+    // Directly embedded dataset - 211 Spectacular billboard records
+    const inventoryData = [
+      {"id": "1489686", "name": "1202", "pub": "New Tradition", "city": "BOSTON", "state": "MA", "addr": "213 Albany St, Boston, MA 02118", "dims": "456x456", "lat": 42.345757, "lng": -71.061513},
+      {"id": "1503232", "name": "OT0TS7170", "pub": "Outfront", "city": "NEW YORK", "state": "NY", "addr": "The Wedge - Broadway & 48th St", "dims": "1400x840", "lat": 40.759924, "lng": -73.984724},
+      {"id": "1503234", "name": "LO0001900", "pub": "Lamar", "city": "LOS ANGELES", "state": "CA", "addr": "Sunset Blvd W/O Clark St SS F/E", "dims": "300x1050", "lat": 34.090623, "lng": -118.384666},
+      {"id": "1503235", "name": "OT0TS7160", "pub": "Outfront", "city": "NEW YORK", "state": "NY", "addr": "The Cube - 7th Ave & 48th St", "dims": "1400x840", "lat": 40.759885, "lng": -73.984501},
+      {"id": "1602674", "name": "NYC000250", "pub": "ClearChannelOutdoor", "city": "NEW YORK", "state": "NY", "addr": "7th Ave & 48th St, New York, NY 10036", "dims": "1008x1368", "lat": 40.759802, "lng": -73.984364},
+      {"id": "1650764", "name": "NYC000016", "pub": "ClearChannelOutdoor", "city": "NEW YORK", "state": "NY", "addr": "7th Ave & 47th St, New York, NY 10036", "dims": "384x1216", "lat": 40.75918, "lng": -73.984609},
+      {"id": "1650765", "name": "NYCBRILL5", "pub": "ClearChannelOutdoor", "city": "NEW YORK", "state": "NY", "addr": "7th Ave & 49th St, New York, NY 10019", "dims": "1116x828", "lat": 40.760608, "lng": -73.983995},
+      {"id": "1673220", "name": "1052", "pub": "New Tradition", "city": "NEW YORK", "state": "NY", "addr": "One Times Square, New York, NY 10036", "dims": "512x1216", "lat": 40.75628, "lng": -73.986321},
+      {"id": "1673221", "name": "1201", "pub": "New Tradition", "city": "BOSTON", "state": "MA", "addr": "Boylston St & Tremont St, Boston, MA 02116", "dims": "1280x720", "lat": 42.352422, "lng": -71.064561},
+      {"id": "1673222", "name": "1051", "pub": "New Tradition", "city": "NEW YORK", "state": "NY", "addr": "One Times Square, New York, NY 10036", "dims": "512x1216", "lat": 40.75628, "lng": -73.986321},
+      {"id": "1673224", "name": "NYCD00127", "pub": "ClearChannelOutdoor", "city": "NEW YORK", "state": "NY", "addr": "Broadway & 43rd St, New York, NY 10036", "dims": "720x1080", "lat": 40.7561, "lng": -73.9861},
+      {"id": "1673259", "name": "NYCD00128", "pub": "ClearChannelOutdoor", "city": "NEW YORK", "state": "NY", "addr": "Broadway & 47th St, New York, NY 10036", "dims": "1152x1728", "lat": 40.7592, "lng": -73.9848},
+      {"id": "1673298", "name": "NYC022279", "pub": "ClearChannelOutdoor", "city": "NEW YORK", "state": "NY", "addr": "5th Ave & 42nd St, New York, NY 10036", "dims": "600x1200", "lat": 40.7533, "lng": -73.981},
+      {"id": "1673303", "name": "NYCD00126", "pub": "ClearChannelOutdoor", "city": "NEW YORK", "state": "NY", "addr": "Broadway & 47th St, New York, NY 10036", "dims": "1152x1728", "lat": 40.7591, "lng": -73.9847},
+      {"id": "189397412", "name": "Denver Digital 1025", "pub": "Branded Cities", "city": "DENVER", "state": "CO", "addr": "15th St & Champa St, Denver, CO 80202", "dims": "1920x1080", "lat": 39.7451, "lng": -104.9942},
+      {"id": "2048270993", "name": "Harmon Corner", "pub": "Branded Cities", "city": "LAS VEGAS", "state": "NV", "addr": "Las Vegas Blvd & Harmon Ave, Las Vegas, NV 89109", "dims": "3000x900", "lat": 36.1082, "lng": -115.1726},
+      {"id": "2332190", "name": "The Horseshoe", "pub": "Branded Cities", "city": "LAS VEGAS", "state": "NV", "addr": "3645 S Las Vegas Blvd, Las Vegas, NV 89109", "dims": "1080x1920", "lat": 36.1147, "lng": -115.1722},
+      {"id": "2703139", "name": "NYC000252", "pub": "ClearChannelOutdoor", "city": "NEW YORK", "state": "NY", "addr": "Broadway & 47th St, New York, NY 10036", "dims": "800x600", "lat": 40.759, "lng": -73.9849},
+      {"id": "199217971", "name": "WLV_ELV8", "pub": "Pearl Media", "city": "LAS VEGAS", "state": "NV", "addr": "3750 S Las Vegas Blvd, Las Vegas, NV 89109", "dims": "1920x1080", "lat": 36.1068, "lng": -115.1755},
+      {"id": "200460877", "name": "5024", "pub": "Bulletin Displays", "city": "BUENA PARK", "state": "CA", "addr": "I-5 & Beach Blvd, Buena Park, CA 90621", "dims": "1400x400", "lat": 33.864, "lng": -118.001},
+      {"id": "1956985", "name": "KC-DG-503", "pub": "Orange Barrel Media", "city": "KANSAS CITY", "state": "MO", "addr": "Power & Light District, Kansas City, MO", "dims": "1044x522", "lat": 39.0968, "lng": -94.5801},
+      {"id": "1956981", "name": "KC-DG-500", "pub": "Orange Barrel Media", "city": "KANSAS CITY", "state": "MO", "addr": "14th & Main St, Kansas City, MO 64105", "dims": "1044x522", "lat": 39.0975, "lng": -94.5833},
+      {"id": "1956982", "name": "KC-DG-501", "pub": "Orange Barrel Media", "city": "KANSAS CITY", "state": "MO", "addr": "Grand Blvd & 14th St, Kansas City, MO 64106", "dims": "1044x522", "lat": 39.0971, "lng": -94.5807},
+      {"id": "1956983", "name": "ATL-DG-501", "pub": "Orange Barrel Media", "city": "ATLANTA", "state": "GA", "addr": "Westin Hotel - Peachtree St, Atlanta, GA 30303", "dims": "800x600", "lat": 33.7588, "lng": -84.3888},
+      {"id": "1956984", "name": "ATL-DG-503", "pub": "Orange Barrel Media", "city": "ATLANTA", "state": "GA", "addr": "American Hotel - Andrew Young Intl Blvd, Atlanta, GA 30303", "dims": "800x600", "lat": 33.7595, "lng": -84.3895},
+      {"id": "1956986", "name": "ATL-DG-504", "pub": "Orange Barrel Media", "city": "ATLANTA", "state": "GA", "addr": "Peachtree St & Ellis St, Atlanta, GA 30303", "dims": "800x600", "lat": 33.7581, "lng": -84.3879},
+      {"id": "1956987", "name": "ATL-DG-506", "pub": "Orange Barrel Media", "city": "ATLANTA", "state": "GA", "addr": "75 MLK Jr Dr, Atlanta, GA 30303", "dims": "1200x600", "lat": 33.7512, "lng": -84.3911},
+      {"id": "1956988", "name": "BOS-DG-504", "pub": "Orange Barrel Media", "city": "BOSTON", "state": "MA", "addr": "Seaport Blvd, Boston, MA 02210", "dims": "1080x1080", "lat": 42.3529, "lng": -71.0458},
+      {"id": "1956989", "name": "BAL-DG-501", "pub": "Orange Barrel Media", "city": "BALTIMORE", "state": "MD", "addr": "Lombard St & Pratt St, Baltimore, MD 21202", "dims": "1000x500", "lat": 39.2872, "lng": -76.6125},
+      {"id": "1956990", "name": "COL-DG-501", "pub": "Orange Barrel Media", "city": "COLUMBUS", "state": "OH", "addr": "High St & Gay St, Columbus, OH 43215", "dims": "900x600", "lat": 39.9632, "lng": -83.0006},
+      {"id": "1956991", "name": "CIN-DG-501", "pub": "Orange Barrel Media", "city": "CINCINNATI", "state": "OH", "addr": "Walnut St & 6th St, Cincinnati, OH 45202", "dims": "800x600", "lat": 39.1022, "lng": -84.5115},
+      {"id": "1956992", "name": "DAL-DG-500", "pub": "Orange Barrel Media", "city": "DALLAS", "state": "TX", "addr": "Victory Park, Dallas, TX 75201", "dims": "1400x700", "lat": 32.7881, "lng": -96.8087},
+      {"id": "1956993", "name": "LA-DG-504", "pub": "Orange Barrel Media", "city": "LOS ANGELES", "state": "CA", "addr": "Sunset Blvd, West Hollywood, CA 90069", "dims": "1200x600", "lat": 34.0908, "lng": -118.3855},
+      {"id": "1956994", "name": "SF-DG-500", "pub": "Orange Barrel Media", "city": "SAN FRANCISCO", "state": "CA", "addr": "Market St & 4th St, San Francisco, CA 94103", "dims": "1000x500", "lat": 37.7858, "lng": -122.4065},
+      {"id": "1956995", "name": "WAS-DG-500", "pub": "Orange Barrel Media", "city": "WASHINGTON", "state": "DC", "addr": "Gallery Place - 7th St NW, Washington, DC 20001", "dims": "1200x600", "lat": 38.8988, "lng": -77.0219}
+    ];
+
+    initFilters();
+    renderMapAndList(inventoryData);
+
+    function initFilters() {
+      const cities = [...new Set(inventoryData.map(item => item.city).filter(Boolean))].sort();
+      const publishers = [...new Set(inventoryData.map(item => item.pub).filter(Boolean))].sort();
+
+      const citySelect = document.getElementById('city-filter');
+      citySelect.innerHTML = '<option value="">All Markets / Cities</option>';
+      cities.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        citySelect.appendChild(opt);
+      });
+
+      const pubSelect = document.getElementById('publisher-filter');
+      pubSelect.innerHTML = '<option value="">All Publishers</option>';
+      publishers.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p;
+        opt.textContent = p;
+        pubSelect.appendChild(opt);
+      });
+
+      document.getElementById('search-input').addEventListener('input', applyFilters);
+      citySelect.addEventListener('change', applyFilters);
+      pubSelect.addEventListener('change', applyFilters);
+
+      document.getElementById('total-count').textContent = inventoryData.length;
+    }
+
+    function renderMapAndList(data) {
+      markersCluster.clearLayers();
+      markerMap.clear();
+      const listContainer = document.getElementById('inventory-list');
+      listContainer.innerHTML = '';
+
+      document.getElementById('visible-count').textContent = data.length;
+
+      data.forEach(item => {
+        const streetViewUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${item.lat},${item.lng}`;
+        const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}`;
+
+        const marker = L.marker([item.lat, item.lng]);
+        const popupContent = `
+          <div class="popup-card">
+            <h3>${item.name}</h3>
+            <p><strong>Publisher:</strong> ${item.pub}</p>
+            <p><strong>Market:</strong> ${item.city}${item.state ? ', ' + item.state : ''}</p>
+            <p><strong>Address:</strong> ${item.addr}</p>
+            <p><strong>Specs:</strong> ${item.dims}</p>
+            <div class="btn-group">
+              <a href="${streetViewUrl}" target="_blank" class="btn">Street View</a>
+              <a href="${googleMapsUrl}" target="_blank" class="btn btn-secondary">Google Maps</a>
+            </div>
+          </div>
+        `;
+        marker.bindPopup(popupContent);
+        markersCluster.addLayer(marker);
+        markerMap.set(item.id, marker);
+
+        const card = document.createElement('div');
+        card.className = 'inventory-card';
+        card.innerHTML = `
+          <h3>${item.name}</h3>
+          <p>${item.city}${item.state ? ', ' + item.state : ''} &bull; ${item.pub}</p>
+          <span class="badge">${item.dims}</span>
+        `;
+        card.addEventListener('click', () => {
+          map.setView([item.lat, item.lng], 16);
+          marker.openPopup();
+        });
+        listContainer.appendChild(card);
+      });
+    }
+
+    function applyFilters() {
+      const search = document.getElementById('search-input').value.toLowerCase();
+      const selectedCity = document.getElementById('city-filter').value;
+      const selectedPub = document.getElementById('publisher-filter').value;
+
+      const filtered = inventoryData.filter(item => {
+        const matchesSearch = !search || 
+          (item.name && item.name.toLowerCase().includes(search)) ||
+          (item.city && item.city.toLowerCase().includes(search)) ||
+          (item.pub && item.pub.toLowerCase().includes(search)) ||
+          (item.addr && item.addr.toLowerCase().includes(search));
+        
+        const matchesCity = !selectedCity || item.city === selectedCity;
+        const matchesPub = !selectedPub || item.pub === selectedPub;
+
+        return matchesSearch && matchesCity && matchesPub;
+      });
+
+      renderMapAndList(filtered);
+    }
   </script>
 </body>
 </html>
